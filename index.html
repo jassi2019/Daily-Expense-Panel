@@ -400,7 +400,7 @@
 
 <script>
 // ===== CLOUD SYNC (JSONBlob) =====
-var BLOB_URL = "https://jsonblob.com/api/jsonBlob/019dd035-4b18-7267-b0d8-2700c0d04bd3";
+var API_URL = "/api/data";
 var syncing = false;
 
 function setSyncStatus(status, text) {
@@ -418,7 +418,7 @@ function cloudSave(data) {
   syncing = true;
   setSyncStatus("syncing", "Syncing to cloud...");
 
-  fetch(BLOB_URL, {
+  fetch(API_URL, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data)
@@ -436,7 +436,7 @@ function cloudSave(data) {
 }
 
 function cloudLoad() {
-  return fetch(BLOB_URL).then(function(res) {
+  return fetch(API_URL).then(function(res) {
     if (!res.ok) throw new Error("Failed");
     return res.json();
   });

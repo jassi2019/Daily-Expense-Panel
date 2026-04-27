@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Daily Expense Panel</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #06060f;
+      --bg-card: rgba(255,255,255,0.035);
+      --border: rgba(255,255,255,0.07);
+      --accent: #6c5ce7;
+      --accent-light: #a29bfe;
+      --gold: #fdcb6e;
+      --gold-dark: #e17055;
+      --green: #00b894;
+      --green-light: #55efc4;
+      --red: #ff6b6b;
+      --text: #eaeaf2;
+      --text-dim: #6e6e8a;
+      --text-muted: #3a3a55;
+      --radius: 14px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      min-height: 100vh;
+      color: var(--text);
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 600px 400px at 15% 20%, rgba(108,92,231,0.10) 0%, transparent 100%),
+        radial-gradient(ellipse 500px 500px at 85% 70%, rgba(0,184,148,0.07) 0%, transparent 100%),
+        radial-gradient(ellipse 400px 300px at 50% 100%, rgba(253,203,110,0.05) 0%, transparent 100%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 24px 16px 40px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── Header ── */
+    .header { text-align: center; margin-bottom: 28px; }
+
+    .header .logo {
+      width: 52px; height: 52px;
+      background: linear-gradient(135deg, var(--accent), var(--green));
+      border-radius: 16px;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 1.4rem; color: #fff;
+      margin-bottom: 12px;
+      box-shadow: 0 8px 28px rgba(108,92,231,0.25);
+    }
+
+    .header h1 {
+      font-size: 1.6rem; font-weight: 800;
+      background: linear-gradient(135deg, #fff, var(--accent-light), var(--gold));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+
+    .header p { color: var(--text-dim); font-size: 0.82rem; margin-top: 4px; }
+
+    /* ── Stats ── */
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 22px; }
+
+    .stat {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px 10px; text-align: center;
+    }
+
+    .stat .ic {
+      width: 36px; height: 36px; border-radius: 10px;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 0.95rem; margin-bottom: 8px;
+    }
+
+    .stat:nth-child(1) .ic { background: rgba(108,92,231,0.15); color: var(--accent-light); }
+    .stat:nth-child(2) .ic { background: rgba(0,184,148,0.15); color: var(--green-light); }
+    .stat:nth-child(3) .ic { background: rgba(253,203,110,0.15); color: var(--gold); }
+
+    .stat .val { font-size: 1.3rem; font-weight: 800; }
+    .stat:nth-child(1) .val { color: var(--accent-light); }
+    .stat:nth-child(2) .val { color: var(--green-light); }
+    .stat:nth-child(3) .val { color: var(--gold); }
+
+    .stat .lbl { font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; margin-top: 2px; }
+
+    /* ── Card ── */
+    .card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 18px; padding: 22px; margin-bottom: 16px;
+    }
+
+    .card-head {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 18px; flex-wrap: wrap;
+    }
+
+    .badge {
+      width: 32px; height: 32px; border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 0.8rem; color: #fff; flex-shrink: 0;
+    }
+
+    .badge-1 { background: linear-gradient(135deg, var(--accent), #a29bfe); }
+    .badge-2 { background: linear-gradient(135deg, var(--gold-dark), var(--gold)); }
+
+    .card-head h2 { font-size: 0.95rem; font-weight: 700; }
+
+    .date-pick {
+      margin-left: auto;
+      background: rgba(108,92,231,0.12); border: 1px solid rgba(108,92,231,0.2);
+      border-radius: 20px; padding: 5px 12px;
+      display: flex; align-items: center; gap: 6px;
+    }
+
+    .date-pick input {
+      background: transparent; border: none; color: var(--accent-light);
+      font-family: 'Inter', sans-serif; font-size: 0.78rem; font-weight: 600;
+      outline: none; cursor: pointer; width: 120px;
+    }
+
+    .date-pick input::-webkit-calendar-picker-indicator { filter: invert(0.7) sepia(1) hue-rotate(200deg); }
+
+    /* ── Form ── */
+    .form-stack { display: flex; flex-direction: column; gap: 10px; }
+
+    .form-row-h { display: flex; gap: 10px; }
+    .form-row-h .fg { flex: 1; display: flex; flex-direction: column; }
+
+    .fg label {
+      font-size: 0.65rem; color: var(--text-dim); margin-bottom: 4px;
+      text-transform: uppercase; letter-spacing: 1px; font-weight: 600;
+    }
+
+    input, .inp {
+      padding: 11px 14px; border: 1px solid var(--border); border-radius: 10px;
+      background: rgba(255,255,255,0.025); color: var(--text);
+      font-size: 0.9rem; font-family: 'Inter', sans-serif; outline: none;
+      transition: border-color 0.2s;
+      width: 100%;
+    }
+
+    input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(108,92,231,0.1); }
+    input::placeholder { color: var(--text-muted); }
+
+    /* ── Buttons ── */
+    .btn {
+      padding: 11px 20px; border: none; border-radius: 10px;
+      font-size: 0.85rem; font-weight: 700; font-family: 'Inter', sans-serif;
+      cursor: pointer; transition: all 0.2s;
+      display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
+      justify-content: center;
+    }
+
+    .btn:active { transform: scale(0.97); }
+
+    .btn-accent { background: linear-gradient(135deg, var(--accent), #a29bfe); color: #fff; }
+    .btn-gold { background: linear-gradient(135deg, var(--gold-dark), var(--gold)); color: #fff; }
+    .btn-green { background: linear-gradient(135deg, var(--green), var(--green-light)); color: var(--bg); }
+    .btn-danger { background: rgba(255,107,107,0.12); color: var(--red); border: 1px solid rgba(255,107,107,0.15); }
+    .btn-ghost { background: rgba(255,255,255,0.05); color: var(--text-dim); border: 1px solid var(--border); }
+
+    .btn-full { width: 100%; }
+
+    /* ── Class list ── */
+    .cl-list { margin-top: 12px; }
+
+    .cl-empty {
+      text-align: center; padding: 20px; color: var(--text-muted);
+      font-size: 0.82rem; border: 1px dashed rgba(255,255,255,0.07); border-radius: 12px;
+    }
+
+    .cl-empty i { font-size: 1.3rem; margin-bottom: 6px; display: block; }
+
+    .cl-item {
+      display: flex; align-items: center; gap: 10px;
+      background: rgba(255,255,255,0.025); border: 1px solid var(--border);
+      border-radius: 12px; padding: 10px 12px; margin-bottom: 6px;
+      animation: fadeIn 0.25s ease;
+    }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+    .cl-item .n {
+      background: linear-gradient(135deg, var(--accent), #a29bfe);
+      color: #fff; min-width: 28px; height: 28px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 0.75rem; flex-shrink: 0;
+    }
+
+    .cl-item .inf { flex: 1; min-width: 0; }
+    .cl-item .tn { font-weight: 600; font-size: 0.88rem; }
+    .cl-item .tl { font-size: 0.72rem; color: var(--green); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .cl-item .rm {
+      width: 28px; height: 28px; border-radius: 8px;
+      border: 1px solid rgba(255,107,107,0.2); background: rgba(255,107,107,0.06);
+      color: var(--red); cursor: pointer;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+      font-size: 0.7rem;
+    }
+
+    .cl-count {
+      text-align: center; color: var(--accent-light); font-size: 0.75rem; font-weight: 600;
+      margin-top: 8px; padding: 6px; background: rgba(108,92,231,0.07); border-radius: 8px;
+    }
+
+    /* ── Expense input ── */
+    .exp-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+    .exp-wrap { flex: 1; min-width: 150px; position: relative; }
+    .exp-wrap .rs { position: absolute; left: 14px; bottom: 12px; color: var(--gold); font-weight: 700; font-size: 0.9rem; }
+    .exp-wrap input { padding-left: 38px; font-size: 1rem; font-weight: 700; }
+    .exp-wrap input:focus { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(253,203,110,0.1); }
+
+    /* ── Graph ── */
+    .chart-wrap {
+      position: relative; width: 100%; height: 220px; margin-top: 6px;
+    }
+
+    .chart-wrap canvas { width: 100% !important; height: 100% !important; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed; top: 16px; left: 50%; transform: translateX(-50%) translateY(-100px);
+      padding: 12px 20px; border-radius: 12px; font-weight: 600; font-size: 0.85rem;
+      z-index: 9999; transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+      display: flex; align-items: center; gap: 8px; max-width: 90%;
+    }
+
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.success { background: rgba(0,184,148,0.95); color: #fff; box-shadow: 0 6px 24px rgba(0,184,148,0.3); }
+    .toast.error { background: rgba(255,107,107,0.95); color: #fff; box-shadow: 0 6px 24px rgba(255,107,107,0.3); }
+
+    /* ── Records ── */
+    .rec-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+    .rec-head h2 { font-size: 0.95rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    .rec-head h2 i { color: var(--accent-light); }
+
+    .filters { display: flex; gap: 8px; margin: 14px 0; flex-wrap: wrap; align-items: flex-end; }
+    .filters .fg { min-width: 0; flex: 1; }
+    .filters input { padding: 8px 10px; font-size: 0.82rem; }
+
+    /* ── Mobile-first table → card layout ── */
+    .records-list { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+
+    .day-block {
+      background: rgba(255,255,255,0.02); border: 1px solid var(--border);
+      border-radius: 14px; overflow: hidden;
+    }
+
+    .day-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 14px; background: rgba(108,92,231,0.07);
+      flex-wrap: wrap; gap: 8px;
+    }
+
+    .day-head .dh-info { display: flex; align-items: center; gap: 8px; }
+    .day-head .dh-info i { color: var(--accent-light); }
+    .day-head .dh-info span { font-weight: 700; font-size: 0.88rem; color: var(--accent-light); }
+    .day-head .dh-info .cls-count { font-size: 0.75rem; color: var(--text-dim); font-weight: 500; }
+
+    .day-head .dh-expense {
+      font-weight: 800; font-size: 1.1rem; color: var(--gold);
+    }
+
+    .day-actions {
+      display: flex; gap: 6px; padding: 8px 14px;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+
+    .day-actions button {
+      padding: 5px 10px; border-radius: 7px; cursor: pointer;
+      font-size: 0.7rem; font-weight: 600; font-family: 'Inter', sans-serif;
+      transition: all 0.2s; border: 1px solid;
+    }
+
+    .da-edit { border-color: rgba(253,203,110,0.3); background: rgba(253,203,110,0.08); color: var(--gold); }
+    .da-add { border-color: rgba(108,92,231,0.3); background: rgba(108,92,231,0.08); color: var(--accent-light); }
+    .da-del { border-color: rgba(255,107,107,0.2); background: rgba(255,107,107,0.06); color: var(--red); }
+
+    .day-classes { padding: 6px 0; }
+
+    .dc-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 14px; border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+
+    .dc-item:last-child { border-bottom: none; }
+
+    .dc-num {
+      color: var(--text-muted); font-weight: 700; font-size: 0.78rem;
+      min-width: 20px; text-align: center;
+    }
+
+    .dc-info { flex: 1; min-width: 0; }
+    .dc-teacher { font-weight: 600; font-size: 0.88rem; }
+    .dc-link {
+      font-size: 0.72rem; color: var(--green); white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis; display: block;
+    }
+    .dc-link a { color: var(--green); text-decoration: none; }
+    .dc-link a:hover { text-decoration: underline; }
+
+    .dc-rm {
+      width: 26px; height: 26px; border-radius: 7px; flex-shrink: 0;
+      border: 1px solid rgba(255,107,107,0.15); background: transparent;
+      color: var(--red); cursor: pointer; font-size: 0.65rem;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0.5; transition: opacity 0.2s;
+    }
+
+    .dc-rm:hover { opacity: 1; background: rgba(255,107,107,0.1); }
+
+    /* Inline add form inside day block */
+    .day-add-form {
+      display: none; padding: 10px 14px;
+      border-top: 1px solid var(--border);
+      gap: 8px; flex-wrap: wrap;
+    }
+
+    .day-add-form.open { display: flex; }
+    .day-add-form input { flex: 1; min-width: 80px; padding: 8px 10px; font-size: 0.82rem; }
+    .day-add-form button { padding: 8px 14px; font-size: 0.78rem; }
+
+    .empty-msg {
+      text-align: center; padding: 36px 16px; color: var(--text-muted);
+    }
+    .empty-msg i { font-size: 2rem; margin-bottom: 10px; display: block; }
+
+    .btn-row { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+    .btn-row .btn { flex: 1; }
+
+    /* ── Responsive ── */
+    @media (max-width: 500px) {
+      .container { padding: 16px 10px 30px; }
+      .card { padding: 16px; border-radius: 14px; }
+      .header h1 { font-size: 1.3rem; }
+      .stat .val { font-size: 1.1rem; }
+      .stat .lbl { font-size: 0.6rem; }
+      .day-head .dh-expense { font-size: 1rem; }
+      .btn { padding: 10px 14px; font-size: 0.82rem; }
+      .chart-wrap { height: 180px; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo"><i class="fas fa-wallet"></i></div>
+    <h1>Daily Expense Panel</h1>
+    <p>Manage your daily class expenses</p>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat">
+      <div class="ic"><i class="fas fa-calendar-check"></i></div>
+      <div class="val" id="sDays">0</div>
+      <div class="lbl">Days</div>
+    </div>
+    <div class="stat">
+      <div class="ic"><i class="fas fa-chalkboard-teacher"></i></div>
+      <div class="val" id="sClass">0</div>
+      <div class="lbl">Classes</div>
+    </div>
+    <div class="stat">
+      <div class="ic"><i class="fas fa-coins"></i></div>
+      <div class="val" id="sTotal">Rs. 0</div>
+      <div class="lbl">Total</div>
+    </div>
+  </div>
+
+  <!-- Graph -->
+  <div class="card">
+    <div class="card-head">
+      <div class="badge badge-1"><i class="fas fa-chart-line" style="font-size:0.7rem;"></i></div>
+      <h2>Daily Expense Graph</h2>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="expChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Step 1 -->
+  <div class="card">
+    <div class="card-head">
+      <div class="badge badge-1">1</div>
+      <h2>Add Classes</h2>
+      <div class="date-pick">
+        <i class="fas fa-calendar-day" style="color:var(--accent-light);font-size:0.75rem;"></i>
+        <input type="date" id="dateInput" />
+      </div>
+    </div>
+    <div class="form-stack">
+      <div class="form-row-h">
+        <div class="fg">
+          <label><i class="fas fa-user"></i> Teacher Name</label>
+          <input type="text" id="teacherInput" placeholder="Teacher ka naam" />
+        </div>
+      </div>
+      <div class="fg">
+        <label><i class="fas fa-link"></i> Link (Optional)</label>
+        <input type="text" id="linkInput" placeholder="Class link" />
+      </div>
+      <button type="button" class="btn btn-accent btn-full" onclick="addClass()"><i class="fas fa-plus"></i> Add Class</button>
+    </div>
+    <div class="cl-list" id="classList">
+      <div class="cl-empty"><i class="fas fa-inbox"></i>Koi class add nahi ki abhi</div>
+    </div>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="card">
+    <div class="card-head">
+      <div class="badge badge-2">2</div>
+      <h2>Din Ka Kharcha & Save</h2>
+    </div>
+    <div class="exp-row">
+      <div class="exp-wrap">
+        <label style="font-size:0.65rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;font-weight:600;margin-bottom:4px;display:block;"><i class="fas fa-money-bill-wave"></i> Pura Din Ka Kharcha</label>
+        <div style="position:relative;">
+          <span class="rs">Rs.</span>
+          <input type="number" id="expenseInput" placeholder="0" min="0" />
+        </div>
+      </div>
+    </div>
+    <button type="button" class="btn btn-gold btn-full" style="margin-top:12px;" onclick="saveDay()"><i class="fas fa-save"></i> Save Day Entry</button>
+  </div>
+
+  <!-- Records -->
+  <div class="card">
+    <div class="rec-head">
+      <h2><i class="fas fa-table"></i> All Records</h2>
+    </div>
+
+    <div class="filters">
+      <div class="fg">
+        <label>Date</label>
+        <input type="date" id="filterDate" onchange="loadRecords()" />
+      </div>
+      <div class="fg">
+        <label>Teacher</label>
+        <input type="text" id="filterTeacher" placeholder="Search..." oninput="loadRecords()" />
+      </div>
+      <button type="button" class="btn btn-ghost" style="padding:8px 12px;font-size:0.75rem;" onclick="clearFilters()"><i class="fas fa-times"></i></button>
+    </div>
+
+    <div class="records-list" id="recordsList">
+      <div class="empty-msg"><i class="fas fa-folder-open"></i><p>Koi record nahi hai</p></div>
+    </div>
+
+    <div class="btn-row">
+      <button type="button" class="btn btn-green" onclick="downloadExcel()"><i class="fas fa-file-excel"></i> Excel</button>
+      <button type="button" class="btn btn-danger" onclick="clearAll()"><i class="fas fa-trash-alt"></i> Clear All</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var todayClasses = [];
+var expChart = null;
+
+function getData() {
+  try { return JSON.parse(localStorage.getItem("dailyRecords")) || []; }
+  catch(e) { return []; }
+}
+
+function saveData(d) { localStorage.setItem("dailyRecords", JSON.stringify(d)); }
+
+function getTodayStr() {
+  var t = new Date();
+  return t.getFullYear() + "-" + String(t.getMonth()+1).padStart(2,"0") + "-" + String(t.getDate()).padStart(2,"0");
+}
+
+function fmtDate(ds) {
+  var p = ds.split("-");
+  var m = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return p[2] + " " + m[parseInt(p[1])-1] + " " + p[0];
+}
+
+function esc(t) { var d = document.createElement("div"); d.textContent = t; return d.innerHTML; }
+
+function showToast(msg, type) {
+  var t = document.getElementById("toast");
+  t.innerHTML = (type === "error" ? '<i class="fas fa-exclamation-circle"></i>' : '<i class="fas fa-check-circle"></i>') + " " + msg;
+  t.className = "toast " + (type || "success") + " show";
+  setTimeout(function() { t.classList.remove("show"); }, 2500);
+}
+
+function updateStats() {
+  var data = getData();
+  var tc = 0, te = 0;
+  for (var i = 0; i < data.length; i++) { tc += data[i].classes.length; te += data[i].expense; }
+  document.getElementById("sDays").textContent = data.length;
+  document.getElementById("sClass").textContent = tc;
+  document.getElementById("sTotal").textContent = "Rs. " + te.toLocaleString("en-IN");
+}
+
+// ── Graph ──
+function renderChart() {
+  var data = getData();
+  if (data.length === 0) {
+    if (expChart) { expChart.destroy(); expChart = null; }
+    return;
+  }
+
+  // Group by date, sum expenses per date
+  var map = {};
+  for (var i = 0; i < data.length; i++) {
+    var d = data[i].date;
+    map[d] = (map[d] || 0) + data[i].expense;
+  }
+
+  var dates = Object.keys(map).sort();
+  var last15 = dates.slice(-15); // last 15 days
+  var labels = last15.map(function(d) { return fmtDate(d).substring(0, 6); });
+  var values = last15.map(function(d) { return map[d]; });
+
+  var ctx = document.getElementById("expChart").getContext("2d");
+
+  if (expChart) expChart.destroy();
+
+  var gradient = ctx.createLinearGradient(0, 0, 0, 220);
+  gradient.addColorStop(0, "rgba(108,92,231,0.35)");
+  gradient.addColorStop(1, "rgba(108,92,231,0)");
+
+  expChart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: "Expense (Rs.)",
+        data: values,
+        fill: true,
+        backgroundColor: gradient,
+        borderColor: "#a29bfe",
+        borderWidth: 2.5,
+        pointBackgroundColor: "#fdcb6e",
+        pointBorderColor: "#a29bfe",
+        pointRadius: 4,
+        pointHoverRadius: 7,
+        tension: 0.4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: "rgba(10,10,26,0.9)",
+          titleColor: "#a29bfe",
+          bodyColor: "#fdcb6e",
+          bodyFont: { weight: "700" },
+          padding: 10,
+          cornerRadius: 10,
+          callbacks: {
+            label: function(ctx) { return "Rs. " + ctx.parsed.y.toLocaleString("en-IN"); }
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: "#6e6e8a", font: { size: 10, family: "Inter" } },
+          grid: { color: "rgba(255,255,255,0.03)" }
+        },
+        y: {
+          ticks: {
+            color: "#6e6e8a",
+            font: { size: 10, family: "Inter" },
+            callback: function(v) { return "Rs." + v; }
+          },
+          grid: { color: "rgba(255,255,255,0.04)" }
+        }
+      }
+    }
+  });
+}
+
+// ── Step 1 ──
+function addClass() {
+  var teacher = document.getElementById("teacherInput").value.trim();
+  var link = document.getElementById("linkInput").value.trim();
+  if (!teacher) { showToast("Teacher name dalo!", "error"); return; }
+
+  todayClasses.push({ teacher: teacher, link: link });
+  document.getElementById("teacherInput").value = "";
+  document.getElementById("linkInput").value = "";
+  document.getElementById("teacherInput").focus();
+  renderCL();
+  showToast("Class #" + todayClasses.length + " added!");
+}
+
+function removeCL(i) { todayClasses.splice(i, 1); renderCL(); }
+
+function renderCL() {
+  var el = document.getElementById("classList");
+  if (todayClasses.length === 0) {
+    el.innerHTML = '<div class="cl-empty"><i class="fas fa-inbox"></i>Koi class add nahi ki abhi</div>';
+    return;
+  }
+  var h = "";
+  for (var i = 0; i < todayClasses.length; i++) {
+    var c = todayClasses[i];
+    h += '<div class="cl-item"><div class="n">' + (i+1) + '</div><div class="inf"><div class="tn">' + esc(c.teacher) + '</div>' +
+      (c.link ? '<div class="tl"><i class="fas fa-link" style="margin-right:3px;font-size:0.6rem;"></i>' + esc(c.link) + '</div>' : '') +
+      '</div><button class="rm" onclick="removeCL(' + i + ')"><i class="fas fa-times"></i></button></div>';
+  }
+  h += '<div class="cl-count"><i class="fas fa-check-circle"></i> ' + todayClasses.length + ' class' + (todayClasses.length > 1 ? 'es' : '') + ' added</div>';
+  el.innerHTML = h;
+}
+
+// ── Step 2 ──
+function saveDay() {
+  if (todayClasses.length === 0) { showToast("Pehle classes add karo!", "error"); return; }
+  var exp = document.getElementById("expenseInput").value;
+  if (!exp || Number(exp) <= 0) { showToast("Kharcha dalo!", "error"); return; }
+  var dt = document.getElementById("dateInput").value;
+  if (!dt) { showToast("Date select karo!", "error"); return; }
+
+  var data = getData();
+  data.push({ id: Date.now(), date: dt, classes: todayClasses.slice(), expense: Number(exp) });
+  saveData(data);
+
+  todayClasses = [];
+  renderCL();
+  document.getElementById("expenseInput").value = "";
+  showToast("Record save ho gaya!");
+  loadRecords();
+  updateStats();
+  renderChart();
+}
+
+// ── Records ──
+function loadRecords() {
+  var data = getData();
+  var fd = document.getElementById("filterDate").value;
+  var ft = document.getElementById("filterTeacher").value.trim().toLowerCase();
+
+  if (fd) data = data.filter(function(r) { return r.date === fd; });
+  if (ft) data = data.filter(function(r) {
+    for (var i = 0; i < r.classes.length; i++) {
+      if (r.classes[i].teacher.toLowerCase().indexOf(ft) !== -1) return true;
+    }
+    return false;
+  });
+
+  data.sort(function(a, b) { return b.date.localeCompare(a.date) || b.id - a.id; });
+
+  var wrap = document.getElementById("recordsList");
+
+  if (data.length === 0) {
+    wrap.innerHTML = '<div class="empty-msg"><i class="fas fa-folder-open"></i><p>Koi record nahi mila</p></div>';
+    return;
+  }
+
+  var h = "";
+  for (var d = 0; d < data.length; d++) {
+    var rec = data[d];
+
+    h += '<div class="day-block">';
+
+    // Head
+    h += '<div class="day-head"><div class="dh-info"><i class="fas fa-calendar-alt"></i><span>' + fmtDate(rec.date) + '</span><span class="cls-count">(' + rec.classes.length + ' class' + (rec.classes.length > 1 ? 'es' : '') + ')</span></div>';
+    h += '<div class="dh-expense">Rs. ' + rec.expense.toLocaleString("en-IN") + '</div></div>';
+
+    // Actions
+    h += '<div class="day-actions">';
+    h += '<button class="da-edit" onclick="editExp(' + rec.id + ')"><i class="fas fa-pen"></i> Edit Rs.</button>';
+    h += '<button class="da-add" onclick="togAdd(' + rec.id + ')"><i class="fas fa-plus"></i> Add Class</button>';
+    h += '<button class="da-del" onclick="delRec(' + rec.id + ')"><i class="fas fa-trash"></i> Delete</button>';
+    h += '</div>';
+
+    // Add class form
+    h += '<div class="day-add-form" id="af-' + rec.id + '">';
+    h += '<input type="text" id="nt-' + rec.id + '" placeholder="Teacher name" />';
+    h += '<input type="text" id="nl-' + rec.id + '" placeholder="Link (optional)" />';
+    h += '<button class="btn btn-accent" style="padding:8px 12px;font-size:0.75rem;" onclick="addToRec(' + rec.id + ')"><i class="fas fa-check"></i></button>';
+    h += '<button class="btn btn-ghost" style="padding:8px 12px;font-size:0.75rem;" onclick="togAdd(' + rec.id + ')"><i class="fas fa-times"></i></button>';
+    h += '</div>';
+
+    // Classes
+    h += '<div class="day-classes">';
+    for (var c = 0; c < rec.classes.length; c++) {
+      var cl = rec.classes[c];
+      h += '<div class="dc-item">';
+      h += '<div class="dc-num">' + (c+1) + '</div>';
+      h += '<div class="dc-info"><div class="dc-teacher">' + esc(cl.teacher) + '</div>';
+      if (cl.link) {
+        h += '<div class="dc-link"><a href="' + esc(cl.link) + '" target="_blank"><i class="fas fa-external-link-alt" style="font-size:0.6rem;margin-right:3px;"></i>' + esc(cl.link) + '</a></div>';
+      }
+      h += '</div>';
+      h += '<button class="dc-rm" onclick="rmClass(' + rec.id + ',' + c + ')" title="Remove"><i class="fas fa-times"></i></button>';
+      h += '</div>';
+    }
+    h += '</div>';
+
+    h += '</div>'; // day-block end
+  }
+
+  wrap.innerHTML = h;
+  updateStats();
+}
+
+function editExp(id) {
+  var data = getData();
+  var rec = null;
+  for (var i = 0; i < data.length; i++) { if (data[i].id === id) { rec = data[i]; break; } }
+  if (!rec) return;
+  var v = prompt("Naya kharcha dalo (current: Rs. " + rec.expense.toLocaleString("en-IN") + "):", rec.expense);
+  if (v === null) return;
+  v = Number(v);
+  if (!v || v <= 0) { showToast("Valid amount dalo!", "error"); return; }
+  rec.expense = v;
+  saveData(data);
+  showToast("Rs. " + v.toLocaleString("en-IN") + " updated!");
+  loadRecords(); updateStats(); renderChart();
+}
+
+function togAdd(id) {
+  var el = document.getElementById("af-" + id);
+  el.classList.toggle("open");
+  if (el.classList.contains("open")) document.getElementById("nt-" + id).focus();
+}
+
+function addToRec(id) {
+  var teacher = document.getElementById("nt-" + id).value.trim();
+  var link = document.getElementById("nl-" + id).value.trim();
+  if (!teacher) { showToast("Teacher name dalo!", "error"); return; }
+  var data = getData();
+  for (var i = 0; i < data.length; i++) {
+    if (data[i].id === id) { data[i].classes.push({ teacher: teacher, link: link }); break; }
+  }
+  saveData(data);
+  showToast(teacher + " add ho gaya!");
+  loadRecords(); updateStats();
+}
+
+function rmClass(id, ci) {
+  var data = getData();
+  var rec = null;
+  for (var i = 0; i < data.length; i++) { if (data[i].id === id) { rec = data[i]; break; } }
+  if (!rec) return;
+  if (rec.classes.length <= 1) { showToast("Minimum 1 class chahiye!", "error"); return; }
+  var n = rec.classes[ci].teacher;
+  if (!confirm(n + " remove karna hai?")) return;
+  rec.classes.splice(ci, 1);
+  saveData(data);
+  showToast(n + " removed!");
+  loadRecords(); updateStats();
+}
+
+function delRec(id) {
+  if (!confirm("Pura din ka record delete?")) return;
+  var data = getData().filter(function(r) { return r.id !== id; });
+  saveData(data);
+  showToast("Deleted!");
+  loadRecords(); updateStats(); renderChart();
+}
+
+function clearAll() {
+  if (!confirm("Sab data delete ho jayega! Pehle Excel download karlo. Continue?")) return;
+  localStorage.removeItem("dailyRecords");
+  showToast("All cleared!");
+  loadRecords(); updateStats(); renderChart();
+}
+
+function clearFilters() {
+  document.getElementById("filterDate").value = "";
+  document.getElementById("filterTeacher").value = "";
+  loadRecords();
+}
+
+// ── Excel ──
+function downloadExcel() {
+  var data = getData();
+  if (data.length === 0) { showToast("Koi data nahi!", "error"); return; }
+  data.sort(function(a, b) { return a.date.localeCompare(b.date) || a.id - b.id; });
+
+  var rows = [];
+  var gt = 0;
+  for (var d = 0; d < data.length; d++) {
+    var rec = data[d];
+    gt += rec.expense;
+    for (var c = 0; c < rec.classes.length; c++) {
+      rows.push({
+        "Date": c === 0 ? rec.date : "",
+        "Teacher Name": rec.classes[c].teacher,
+        "Link": rec.classes[c].link || "-",
+        "Day Expense (Rs.)": c === 0 ? rec.expense : ""
+      });
+    }
+    rows.push({ "Date": "", "Teacher Name": "", "Link": "", "Day Expense (Rs.)": "" });
+  }
+  rows.push({ "Date": "", "Teacher Name": "GRAND TOTAL", "Link": "", "Day Expense (Rs.)": gt });
+
+  var ws = XLSX.utils.json_to_sheet(rows);
+  ws["!cols"] = [{ wch: 14 }, { wch: 24 }, { wch: 42 }, { wch: 18 }];
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Daily Expenses");
+  XLSX.writeFile(wb, "daily_expenses.xlsx");
+  showToast("Excel downloaded!");
+}
+
+// Enter keys
+document.getElementById("teacherInput").addEventListener("keydown", function(e) { if (e.key === "Enter") addClass(); });
+document.getElementById("linkInput").addEventListener("keydown", function(e) { if (e.key === "Enter") addClass(); });
+document.getElementById("expenseInput").addEventListener("keydown", function(e) { if (e.key === "Enter") saveDay(); });
+
+// INIT
+document.getElementById("dateInput").value = getTodayStr();
+loadRecords();
+updateStats();
+renderChart();
+</script>
+</body>
+</html>

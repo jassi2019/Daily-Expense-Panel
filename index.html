@@ -398,6 +398,304 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- AI Chatbot Buddy -->
+<div class="chat-fab" id="chatFab" onclick="toggleChat()">
+  <div class="fab-animal">🐱</div>
+  <div class="fab-pulse"></div>
+</div>
+
+<div class="chat-box" id="chatBox">
+  <div class="chat-header">
+    <div class="chat-avatar">🐱</div>
+    <div>
+      <div class="chat-name">Golu - AI Buddy</div>
+      <div class="chat-status"><span class="online-dot"></span> Online</div>
+    </div>
+    <button class="chat-close" onclick="toggleChat()"><i class="fas fa-times"></i></button>
+  </div>
+  <div class="chat-messages" id="chatMessages">
+    <div class="chat-msg bot">
+      <div class="msg-avatar">🐱</div>
+      <div class="msg-bubble">Heyy! Mai Golu hoon 🐱 Tera expense buddy! Mujhse kuch bhi puch — "aaj kitna kharcha hua?", "sabse zyada kis din?", ya kuch bhi! 😺</div>
+    </div>
+  </div>
+  <div class="chat-input-area">
+    <input type="text" id="chatInput" placeholder="Golu se pucho..." onkeydown="if(event.key==='Enter')sendChat()" />
+    <button class="chat-send" onclick="sendChat()"><i class="fas fa-paper-plane"></i></button>
+  </div>
+</div>
+
+<style>
+  .chat-fab {
+    position: fixed; bottom: 24px; right: 24px; z-index: 9998;
+    width: 60px; height: 60px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), #a29bfe);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; box-shadow: 0 6px 28px rgba(108,92,231,0.4);
+    transition: transform 0.3s;
+  }
+  .chat-fab:hover { transform: scale(1.1); }
+  .fab-animal { font-size: 1.8rem; }
+  .fab-pulse {
+    position: absolute; inset: -4px; border-radius: 50%;
+    border: 2px solid var(--accent-light);
+    animation: fabPulse 2s ease infinite;
+  }
+  @keyframes fabPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0; transform: scale(1.3); }
+  }
+
+  .chat-box {
+    position: fixed; bottom: 96px; right: 20px; z-index: 9999;
+    width: 340px; max-width: calc(100vw - 32px);
+    background: #0d0d1f; border: 1px solid var(--border);
+    border-radius: 20px; overflow: hidden;
+    display: none; flex-direction: column;
+    box-shadow: 0 12px 48px rgba(0,0,0,0.5);
+    animation: chatIn 0.3s ease;
+    max-height: 480px;
+  }
+  .chat-box.open { display: flex; }
+  @keyframes chatIn { from { opacity: 0; transform: translateY(20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+  .chat-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 16px; background: rgba(108,92,231,0.12);
+    border-bottom: 1px solid var(--border);
+  }
+  .chat-avatar { font-size: 1.6rem; }
+  .chat-name { font-weight: 700; font-size: 0.9rem; }
+  .chat-status { font-size: 0.68rem; color: var(--green-light); display: flex; align-items: center; gap: 4px; }
+  .online-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green-light); display: inline-block; }
+  .chat-close {
+    margin-left: auto; background: none; border: none;
+    color: var(--text-dim); cursor: pointer; font-size: 1rem; padding: 4px;
+  }
+
+  .chat-messages {
+    flex: 1; overflow-y: auto; padding: 14px;
+    display: flex; flex-direction: column; gap: 12px;
+    min-height: 250px; max-height: 320px;
+  }
+
+  .chat-msg { display: flex; gap: 8px; align-items: flex-start; }
+  .chat-msg.user { flex-direction: row-reverse; }
+  .msg-avatar { font-size: 1.2rem; flex-shrink: 0; margin-top: 2px; }
+  .chat-msg.user .msg-avatar { display: none; }
+
+  .msg-bubble {
+    padding: 10px 14px; border-radius: 14px; font-size: 0.82rem;
+    line-height: 1.5; max-width: 85%; word-wrap: break-word;
+  }
+  .chat-msg.bot .msg-bubble {
+    background: rgba(108,92,231,0.12); color: var(--text);
+    border-bottom-left-radius: 4px;
+  }
+  .chat-msg.user .msg-bubble {
+    background: linear-gradient(135deg, var(--accent), #a29bfe); color: #fff;
+    border-bottom-right-radius: 4px;
+  }
+
+  .msg-typing .msg-bubble { display: flex; gap: 4px; padding: 12px 18px; }
+  .typing-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--accent-light); animation: typingBounce 1.2s ease infinite;
+  }
+  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes typingBounce {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-6px); }
+  }
+
+  .chat-input-area {
+    display: flex; gap: 8px; padding: 12px;
+    border-top: 1px solid var(--border);
+  }
+  .chat-input-area input {
+    flex: 1; padding: 10px 14px; font-size: 0.85rem;
+    border-radius: 12px; border: 1px solid var(--border);
+    background: rgba(255,255,255,0.03);
+  }
+  .chat-send {
+    width: 40px; height: 40px; border-radius: 12px; border: none;
+    background: linear-gradient(135deg, var(--accent), #a29bfe);
+    color: #fff; cursor: pointer; display: flex;
+    align-items: center; justify-content: center; font-size: 0.85rem;
+    transition: transform 0.2s;
+  }
+  .chat-send:active { transform: scale(0.9); }
+
+  @media (max-width: 400px) {
+    .chat-box { bottom: 80px; right: 10px; left: 10px; width: auto; max-height: 70vh; }
+    .chat-fab { bottom: 16px; right: 16px; width: 52px; height: 52px; }
+    .fab-animal { font-size: 1.5rem; }
+  }
+</style>
+
+<script>
+function toggleChat() {
+  var box = document.getElementById("chatBox");
+  box.classList.toggle("open");
+}
+
+function sendChat() {
+  var input = document.getElementById("chatInput");
+  var msg = input.value.trim();
+  if (!msg) return;
+  input.value = "";
+
+  addMsg("user", msg);
+  showTyping();
+
+  setTimeout(function() {
+    removeTyping();
+    var reply = goluReply(msg);
+    addMsg("bot", reply);
+  }, 800 + Math.random() * 700);
+}
+
+function addMsg(type, text) {
+  var area = document.getElementById("chatMessages");
+  var div = document.createElement("div");
+  div.className = "chat-msg " + type;
+  div.innerHTML = (type === "bot" ? '<div class="msg-avatar">🐱</div>' : '') +
+    '<div class="msg-bubble">' + text + '</div>';
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+}
+
+function showTyping() {
+  var area = document.getElementById("chatMessages");
+  var div = document.createElement("div");
+  div.className = "chat-msg bot msg-typing";
+  div.id = "typingMsg";
+  div.innerHTML = '<div class="msg-avatar">🐱</div><div class="msg-bubble"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>';
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+}
+
+function removeTyping() {
+  var el = document.getElementById("typingMsg");
+  if (el) el.remove();
+}
+
+function goluReply(msg) {
+  var data = getData();
+  var m = msg.toLowerCase();
+
+  // Total expense
+  if (m.indexOf("total") !== -1 || m.indexOf("kitna kharcha") !== -1 || m.indexOf("kitna hua") !== -1 || m.indexOf("kitna kharch") !== -1) {
+    var total = 0;
+    for (var i = 0; i < data.length; i++) total += data[i].expense;
+    if (data.length === 0) return "Abhi toh koi record nahi hai bhai 😿 Pehle kuch entries daal!";
+    return "Total kharcha abhi tak <b>Rs. " + total.toLocaleString("en-IN") + "</b> ho chuka hai " + data.length + " din mai! 💰 Sambhal ke kharcha kar yaar 😼";
+  }
+
+  // Today's expense
+  if (m.indexOf("aaj") !== -1 || m.indexOf("today") !== -1) {
+    var today = getTodayStr();
+    var todayRecs = data.filter(function(r) { return r.date === today; });
+    if (todayRecs.length === 0) return "Aaj ka koi record nahi hai abhi 📝 Daal de entries!";
+    var todayTotal = 0, todayClasses = 0;
+    for (var i = 0; i < todayRecs.length; i++) { todayTotal += todayRecs[i].expense; todayClasses += todayRecs[i].classes.length; }
+    return "Aaj <b>" + todayClasses + " classes</b> hui aur kharcha <b>Rs. " + todayTotal.toLocaleString("en-IN") + "</b> hua! 📊 Chalo theek hai 😸";
+  }
+
+  // Highest day
+  if (m.indexOf("sabse zyada") !== -1 || m.indexOf("highest") !== -1 || m.indexOf("max") !== -1 || m.indexOf("most") !== -1) {
+    if (data.length === 0) return "Data hi nahi hai toh sabse zyada kya batau 😹";
+    var maxRec = data[0];
+    for (var i = 1; i < data.length; i++) { if (data[i].expense > maxRec.expense) maxRec = data[i]; }
+    return "Sabse zyada kharcha <b>" + fmtDate(maxRec.date) + "</b> ko hua — <b>Rs. " + maxRec.expense.toLocaleString("en-IN") + "</b>! 🙀 Kya khareed liya tha us din?!";
+  }
+
+  // Lowest day
+  if (m.indexOf("sabse kam") !== -1 || m.indexOf("lowest") !== -1 || m.indexOf("min") !== -1 || m.indexOf("least") !== -1) {
+    if (data.length === 0) return "Koi data nahi hai abhi 😿";
+    var minRec = data[0];
+    for (var i = 1; i < data.length; i++) { if (data[i].expense < minRec.expense) minRec = data[i]; }
+    return "Sabse kam kharcha <b>" + fmtDate(minRec.date) + "</b> ko hua — sirf <b>Rs. " + minRec.expense.toLocaleString("en-IN") + "</b>! 😻 Aise hi paisa bachao!";
+  }
+
+  // Average
+  if (m.indexOf("average") !== -1 || m.indexOf("avg") !== -1 || m.indexOf("ausat") !== -1) {
+    if (data.length === 0) return "Koi data nahi hai average nikalne ke liye 😿";
+    var total = 0;
+    for (var i = 0; i < data.length; i++) total += data[i].expense;
+    var avg = Math.round(total / data.length);
+    return "Tumhara average daily kharcha <b>Rs. " + avg.toLocaleString("en-IN") + "</b> hai! 📈 " + (avg > 3000 ? "Thoda zyada hai yaar 🙀" : "Chalo theek hai 😸");
+  }
+
+  // How many days
+  if (m.indexOf("kitne din") !== -1 || m.indexOf("how many days") !== -1 || m.indexOf("days") !== -1) {
+    return "Abhi tak <b>" + data.length + " din</b> ka record hai mere paas! 📅 " + (data.length > 10 ? "Bohot consistent ho yaar! 😻" : "Aur entries daalo! 😼");
+  }
+
+  // How many classes
+  if (m.indexOf("kitni class") !== -1 || m.indexOf("classes") !== -1 || m.indexOf("class") !== -1) {
+    var tc = 0;
+    for (var i = 0; i < data.length; i++) tc += data[i].classes.length;
+    return "Total <b>" + tc + " classes</b> hui hain abhi tak! 📚 Padhai achhi chal rahi hai! 😸";
+  }
+
+  // Teacher
+  if (m.indexOf("teacher") !== -1 || m.indexOf("sir") !== -1 || m.indexOf("maam") !== -1 || m.indexOf("ma'am") !== -1) {
+    var teachers = {};
+    for (var i = 0; i < data.length; i++) {
+      for (var j = 0; j < data[i].classes.length; j++) {
+        var tn = data[i].classes[j].teacher;
+        teachers[tn] = (teachers[tn] || 0) + 1;
+      }
+    }
+    var names = Object.keys(teachers);
+    if (names.length === 0) return "Koi teacher record nahi hai abhi 😿";
+    names.sort(function(a, b) { return teachers[b] - teachers[a]; });
+    var top3 = names.slice(0, 3).map(function(n) { return "<b>" + n + "</b> (" + teachers[n] + "x)"; });
+    return "Top teachers: " + top3.join(", ") + " 👨‍🏫 Inse sabse zyada padhai hui! 😺";
+  }
+
+  // Last entry
+  if (m.indexOf("last") !== -1 || m.indexOf("pichla") !== -1 || m.indexOf("recent") !== -1) {
+    if (data.length === 0) return "Koi record nahi hai 😿";
+    var sorted = data.slice().sort(function(a, b) { return b.date.localeCompare(a.date); });
+    var last = sorted[0];
+    return "Last entry: <b>" + fmtDate(last.date) + "</b> — " + last.classes.length + " classes, <b>Rs. " + last.expense.toLocaleString("en-IN") + "</b> kharcha! 📋";
+  }
+
+  // Greetings
+  if (m.indexOf("hi") !== -1 || m.indexOf("hello") !== -1 || m.indexOf("hey") !== -1 || m.indexOf("hlo") !== -1 || m.indexOf("bhai") !== -1) {
+    var greets = [
+      "Heyy bhai! 😸 Bol kya jaanna hai?",
+      "Hello yaar! 🐱 Mai Golu, tera expense buddy! Kuch puch na!",
+      "Hii! 😺 Aaj kya haal hai? Kharche ke baare mai kuch puchna hai?",
+      "Hey hey! 🐱 Bol bhai, kya help karu?",
+    ];
+    return greets[Math.floor(Math.random() * greets.length)];
+  }
+
+  // Thanks
+  if (m.indexOf("thanks") !== -1 || m.indexOf("shukriya") !== -1 || m.indexOf("dhanyawad") !== -1 || m.indexOf("thnx") !== -1 || m.indexOf("thank") !== -1) {
+    return "Are koi baat nahi yaar! 😻 Tera hi buddy hoon mai! Kabhi bhi puch lena!";
+  }
+
+  // Help
+  if (m.indexOf("help") !== -1 || m.indexOf("kya puch") !== -1 || m.indexOf("kya kar sakta") !== -1) {
+    return "Mai yeh sab bata sakta hoon 😺:<br>• <b>aaj kitna kharcha?</b><br>• <b>total kitna hua?</b><br>• <b>sabse zyada kis din?</b><br>• <b>sabse kam kis din?</b><br>• <b>average kharcha?</b><br>• <b>kitne din ka record?</b><br>• <b>kitni classes hui?</b><br>• <b>top teachers?</b><br>• <b>last entry?</b><br>Bas puch le! 🐱";
+  }
+
+  // Fallback
+  var fallbacks = [
+    "Hmm samjha nahi yaar 😿 'help' likh de toh bata du kya kya puch sakta hai!",
+    "Yeh toh mujhe nahi aata 🙀 Try kar: 'total kitna hua' ya 'aaj ka kharcha'!",
+    "Meow? 🐱 Mujhe expenses ke baare mai puch — 'total', 'aaj', 'highest', 'average' wagera!",
+    "Are bhai thoda simple bol 😹 'help' type kar toh options dikha du!",
+  ];
+  return fallbacks[Math.floor(Math.random() * fallbacks.length)];
+}
+</script>
+
 <script>
 // ===== CLOUD SYNC (JSONBlob) =====
 var API_URL = "/api/data";

@@ -747,20 +747,40 @@ document.getElementById("expenseInput").addEventListener("keydown", function(e) 
   setSyncStatus("syncing", "Loading data from cloud...");
 
   cloudLoad().then(function(cloudData) {
-    if (Array.isArray(cloudData) && cloudData.length > 0) {
-      var localData = getData();
-      // Merge: use whichever has more records (simple strategy)
-      if (cloudData.length >= localData.length) {
-        localStorage.setItem("dailyRecords", JSON.stringify(cloudData));
-      } else {
-        // Local has more, push to cloud
-        cloudSave(localData);
+    var localData = getData();
+
+    // Validate cloud data — must be array with proper records (have .id and .date)
+    var validCloud = Array.isArray(cloudData) && cloudData.length > 0 && cloudData[0].id && cloudData[0].date;
+    var hasLocal = localData.length > 0;
+
+    if (validCloud && hasLocal) {
+      // Both have data — merge by combining unique records (by id)
+      var idMap = {};
+      var merged = [];
+      // Cloud first
+      for (var i = 0; i < cloudData.length; i++) {
+        if (cloudData[i].id && !idMap[cloudData[i].id]) {
+          idMap[cloudData[i].id] = true;
+          merged.push(cloudData[i]);
+        }
       }
-    } else {
-      // Cloud empty, push local to cloud if exists
-      var localData = getData();
-      if (localData.length > 0) cloudSave(localData);
+      // Then local (add any missing)
+      for (var j = 0; j < localData.length; j++) {
+        if (localData[j].id && !idMap[localData[j].id]) {
+          idMap[localData[j].id] = true;
+          merged.push(localData[j]);
+        }
+      }
+      localStorage.setItem("dailyRecords", JSON.stringify(merged));
+      cloudSave(merged);
+    } else if (validCloud) {
+      // Only cloud has data — use it
+      localStorage.setItem("dailyRecords", JSON.stringify(cloudData));
+    } else if (hasLocal) {
+      // Only local has data — push to cloud
+      cloudSave(localData);
     }
+
     setSyncStatus("synced", "Cloud synced!");
     loadRecords(); updateStats(); renderChart();
   }).catch(function() {
